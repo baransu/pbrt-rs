@@ -12,6 +12,10 @@ pub struct Point {
 }
 
 impl Point {
+  pub fn new(x: f64, y: f64, z: f64) -> Point {
+    Point { x, y, z }
+  }
+
   pub fn zero() -> Point {
     Point::from_one(0.0)
   }

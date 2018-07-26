@@ -19,6 +19,14 @@ impl Vector3 {
     }
   }
 
+  pub fn down() -> Vector3 {
+    Vector3 {
+      x: 0.0,
+      y: -1.0,
+      z: 0.0,
+    }
+  }
+
   pub fn from_one(v: f64) -> Vector3 {
     Vector3 { x: v, y: v, z: v }
   }
