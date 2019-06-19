@@ -1,97 +1,94 @@
 extern crate image;
 extern crate serde;
 
-use std::ops::{Mul, Add};
+use std::path::PathBuf;
+use std::fmt;
+use image::{DynamicImage, GenericImage};
 use pbrt::point::Point;
 use pbrt::rendering::{Intersectable, Ray};
 use pbrt::vector3::Vector3;
 use pbrt::light::Light;
+use pbrt::color::Color;
 
-#[derive(Debug, Clone, Copy)]
+pub struct Texture {
+    pub path: PathBuf,
+
+    pub texture: DynamicImage,
+}
+
+// fn dummy_texture() -> DynamicImage {
+//     DynamicImage::new_rgb8(0, 0)
+// }
+
+impl fmt::Debug for Texture {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "Texture({:?})", self.path)
+    }
+}
+
+impl Texture {
+  pub fn load_texture(path: PathBuf) -> Result<Texture, String> {
+    if let Ok(img) = image::open(path.clone()) {
+        Ok(Texture {
+            path,
+            texture: img,
+        })
+    } else {
+        Err(format!(
+            "Unable to open texture file: {:?}",
+            &path
+        ))
+    }
+  }
+}
+
+pub struct TextureCoords {
+  pub x: f32,
+  pub y: f32,
+}
+
+#[derive(Debug)]
+pub enum Coloration {
+  Color(Color),
+  Texture(Texture)
+}
+
+fn wrap(val: f32, bound: u32) -> u32 {
+  let signed_bound = bound as i32;
+  let float_coord = val * bound as f32;
+  let wrapped_coord = (float_coord as i32) % signed_bound;
+  if wrapped_coord < 0 {
+      (wrapped_coord + signed_bound) as u32
+  } else {
+      wrapped_coord as u32
+  }
+}
+
+impl Coloration {
+  pub fn color(&self, texture_coords: &TextureCoords) -> Color {
+    match *self {
+      Coloration::Color(color) => color,
+      Coloration::Texture(ref texture) => {
+        let tex_x = wrap(texture_coords.x, texture.texture.width());
+        let tex_y = wrap(texture_coords.y, texture.texture.height());
+
+        Color::from_rgba(texture.texture.get_pixel(tex_x, tex_y))
+      }
+    }
+  }
+}
+
+#[derive(Debug)]
 #[repr(C)]
-pub struct Color {
-  pub r: f32,
-  pub g: f32,
-  pub b: f32,
-}
-
-impl Color {
-  pub fn black() -> Color {
-    Color {
-      r: 0.0,
-      g: 0.0,
-      b: 0.0,
-    }
-  }
-
-  pub fn clamp(&self) -> Color {
-    Color {
-      r: self.r.min(1.0).max(0.0),
-      g: self.g.min(1.0).max(0.0),
-      b: self.b.min(1.0).max(0.0),
-    }
-  }
-
-  pub fn to_rgba(&self) -> [u8; 4] {
-    // TODO: gamma correction
-    [
-      (self.r * 255.0) as u8,
-      (self.g * 255.0) as u8,
-      (self.b * 255.0) as u8,
-      255,
-    ]
-  }
-}
-
-impl Mul for Color {
-  type Output = Color;
-
-  fn mul(self, other: Color) -> Color {
-    Color {
-      r: self.r * other.r,
-      g: self.g * other.g,
-      b: self.b * other.b,
-    }
-  }
-}
-
-impl Mul<f32> for Color {
-  type Output = Color;
-
-  fn mul(self, other: f32) -> Color {
-    Color {
-      r: self.r * other,
-      g: self.g * other,
-      b: self.b * other,
-    }
-  }
-}
-
-impl Mul<Color> for f32 {
-  type Output = Color;
-
-  fn mul(self, other: Color) -> Color {
-    other * self
-  }
-}
-
-impl Add for  Color{
-  type Output = Color;
-
-  fn add(self, other: Color) -> Color {
-    Color {
-      r: self.r + other.r,
-      g: self.g + other.g,
-      b: self.b + other.b,
-    }
-  }
+pub struct Material {
+  pub albedo: f32,
+  pub color: Coloration,
 }
 
 pub struct Plane {
   pub origin: Point,
   pub normal: Vector3,
-  pub color: Color,
-  pub albedo: f32,
+  pub material: Material
 }
 
 pub enum Element {
@@ -100,17 +97,10 @@ pub enum Element {
 }
 
 impl Element {
-  pub fn color(&self) -> Color {
+  pub fn material(&self) -> &Material {
     match *self {
-      Element::Sphere(ref s) => s.color.clone(),
-      Element::Plane(ref p) => p.color.clone(),
-    }
-  }
-
-  pub fn albedo(&self) -> f32 {
-    match *self {
-      Element::Sphere(ref s) => s.albedo,
-      Element::Plane(ref p) => p.albedo,
+      Element::Sphere(ref s) => &s.material,
+      Element::Plane(ref p) => &p.material,
     }
   }
 }
@@ -129,34 +119,29 @@ impl Intersectable for Element {
       Element::Plane(ref p) => p.surface_normal(&hit_point),
     }
   }
+
+  fn texture_coords(&self, hit_point: &Point) -> TextureCoords {
+    match *self {
+      Element::Sphere(ref s) => s.texture_coords(&hit_point),
+      Element::Plane(ref p) => p.texture_coords(&hit_point),
+    }
+  }
 }
 
 pub struct Sphere {
   pub center: Point,
   pub radius: f64,
-  pub color: Color,
-  pub albedo: f32,
-}
-
-impl Sphere {
-  pub fn new(center: Point, radius: f64, color: Color, albedo: f32) -> Sphere {
-    Sphere {
-      center,
-      radius,
-      color,
-      albedo
-    }
-  }
+  pub material: Material,
 }
 
 pub struct Intersecion<'a> {
   pub distance: f64,
-  pub object: &'a Element,
+  pub element: &'a Element,
 }
 
 impl<'a> Intersecion<'a> {
-  pub fn new<'b>(distance: f64, object: &'b Element) -> Intersecion<'b> {
-    Intersecion { distance, object }
+  pub fn new<'b>(distance: f64, element: &'b Element) -> Intersecion<'b> {
+    Intersecion { distance, element }
   }
 }
 

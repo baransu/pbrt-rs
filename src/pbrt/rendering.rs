@@ -1,5 +1,5 @@
 use pbrt::point::Point;
-use pbrt::scene::{Plane, Scene, Sphere};
+use pbrt::scene::{TextureCoords, Plane, Scene, Sphere};
 use pbrt::vector3::Vector3;
 
 #[derive(Debug)]
@@ -29,7 +29,9 @@ impl Ray {
 
 pub trait Intersectable {
   fn intersect(&self, ray: &Ray) -> Option<f64>;
+
   fn surface_normal(&self, hit_point: &Point) -> Vector3;
+  fn texture_coords(&self, hit_point: &Point) -> TextureCoords;
 }
 
 impl Intersectable for Sphere {
@@ -61,6 +63,14 @@ impl Intersectable for Sphere {
   fn surface_normal(&self, hit_point: &Point) -> Vector3 {
     (*hit_point - self.center).normalize()
   }
+
+  fn texture_coords(&self, hit_point: &Point) -> TextureCoords {
+    let hit_vec = *hit_point - self.center;
+    TextureCoords {
+      x: (1.0 + (hit_vec.z.atan2(hit_vec.x) as f32) / std::f32::consts::PI) * 0.5,
+      y: (hit_vec.y / self.radius).acos() as f32 / std::f32::consts::PI
+    }
+  }
 }
 
 impl Intersectable for Plane {
@@ -79,5 +89,20 @@ impl Intersectable for Plane {
 
   fn surface_normal(&self, _: &Point) -> Vector3 {
     -self.normal
+  }
+
+  fn texture_coords(&self, hit_point: &Point) -> TextureCoords {
+    let mut x_axis = self.normal.cross(&Vector3 { x: 0.0, y: 0.0, z: 1.0,});
+    if x_axis.length() == 0.0 {
+      x_axis = self.normal.cross(&Vector3 { x: 0.0, y: 1.0, z: 0.0 });
+    }
+    let y_axis = self.normal.cross(&x_axis);
+
+    let hit_vec = *hit_point - self.origin;
+
+    TextureCoords {
+        x: hit_vec.dot(&x_axis) as f32,
+        y: hit_vec.dot(&y_axis) as f32,
+    }
   }
 }

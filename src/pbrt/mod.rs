@@ -6,3 +6,4 @@ pub mod rendering;
 pub mod scene;
 pub mod vector3;
 pub mod light;
+pub mod color;
