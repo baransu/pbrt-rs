@@ -79,10 +79,18 @@ impl Coloration {
 }
 
 #[derive(Debug)]
+pub enum SurfaceType {
+  Diffuse,
+  Reflective { reflectivity: f32 },
+  Refractive { transparency: f32, index: f32 }
+}
+
+#[derive(Debug)]
 #[repr(C)]
 pub struct Material {
   pub albedo: f32,
   pub color: Coloration,
+  pub surface: SurfaceType
 }
 
 pub struct Plane {
@@ -134,14 +142,14 @@ pub struct Sphere {
   pub material: Material,
 }
 
-pub struct Intersecion<'a> {
+pub struct Intersection<'a> {
   pub distance: f64,
   pub element: &'a Element,
 }
 
-impl<'a> Intersecion<'a> {
-  pub fn new<'b>(distance: f64, element: &'b Element) -> Intersecion<'b> {
-    Intersecion { distance, element }
+impl<'a> Intersection<'a> {
+  pub fn new<'b>(distance: f64, element: &'b Element) -> Intersection<'b> {
+    Intersection { distance, element }
   }
 }
 
@@ -152,15 +160,17 @@ pub struct Scene {
   pub background: Color,
   pub entities: Vec<Element>,
   pub lights: Vec<Light>,
+
   pub shadow_bias: f64,
+  pub max_recursion_depth: u32,
 }
 
 impl Scene {
-  pub fn trace(&self, ray: &Ray) -> Option<Intersecion> {
+  pub fn trace(&self, ray: &Ray) -> Option<Intersection> {
     self
       .entities
       .iter()
-      .filter_map(|s| s.intersect(ray).map(|d| Intersecion::new(d, s)))
+      .filter_map(|s| s.intersect(ray).map(|d| Intersection::new(d, s)))
       .min_by(|a, b| a.distance.partial_cmp(&b.distance).unwrap())
   }
 }
