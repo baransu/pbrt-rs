@@ -16,7 +16,7 @@ use rayon::prelude::*;
 mod pbrt;
 
 const FLOATING_POINT_BACKOFF: f64 = 0.01;
-const RAY_COUNT: u32 = 128;
+const RAY_COUNT: u32 = 256;
 const BOUNCE_CAP: u32 = 8;
 // RAY_COUNT + BOUNCE_CAP
 const ROUND_COUNT: u32 = 128;
@@ -38,8 +38,8 @@ fn main() {
   let blue_mat = Material::Reflective;
 
   let scene = Scene {
-    width: 1024,
-    height: 1024,
+    width: 2048,
+    height: 2048,
     fov: 90.0,
     entities: vec![
       // floor
@@ -295,17 +295,17 @@ fn render(scene: &Scene) -> ImageBuffer<image::Rgba<u8>, Vec<u8>> {
   
   ImageBuffer::from_vec(scene.width, scene.height, source).unwrap()
   
-  // let img = ImageBuffer::from_fn(scene.width, scene.height, |x, y| {
+  // ImageBuffer::from_fn(scene.width, scene.height, |x, y| {
+  //   let mut ray_num = 0;
+  //   let mut color_acc = Color::black();
 
-  // });
+  //   while ray_num < RAY_COUNT {
+  //     color_acc = color_acc
+  //       + get_color(scene, x, y)
+  //       * (1.0 / (RAY_COUNT * ROUND_COUNT) as f32);
+  //     ray_num += 1;
+  //   }
 
-  // print!("{:?}\n", img);
-
-  // img
+  //   color_acc.clamp().to_rgba()
+  // })
 }
-
-/*
-  1024 x 1024
-  debug: 5m53s
-  release: 35s
- */
