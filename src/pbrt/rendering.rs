@@ -2,7 +2,7 @@ use pbrt::point::Point;
 use pbrt::scene::{TextureCoords, Plane, Scene, Sphere};
 use pbrt::vector3::Vector3;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Ray {
   pub origin: Point,
   pub direction: Vector3,
@@ -26,12 +26,12 @@ impl Ray {
     }
   }
 
-  pub fn create_reflection(normal: Vector3, incident: Vector3, intersection: Point, bias: f64) -> Ray {
-    Ray {
-      origin: intersection + (normal * bias),
-      direction: incident - (2.0 * incident.dot(&normal) * normal),
-    }
-  }
+  // pub fn create_reflection(normal: Vector3, incident: Vector3, intersection: Point, bias: f64) -> Ray {
+  //   Ray {
+  //     origin: intersection + (normal * bias),
+  //     direction: incident - (2.0 * incident.dot(&normal) * normal),
+  //   }
+  // }
 
   pub fn create_transmission(normal: Vector3, incident: Vector3, intersection: Point, bias: f64, index: f32) -> Option<Ray> {
     let mut ref_n = normal;

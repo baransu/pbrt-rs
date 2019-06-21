@@ -7,18 +7,12 @@ use image::{DynamicImage, GenericImage};
 use pbrt::point::Point;
 use pbrt::rendering::{Intersectable, Ray};
 use pbrt::vector3::Vector3;
-use pbrt::light::Light;
 use pbrt::color::Color;
 
 pub struct Texture {
-    pub path: PathBuf,
-
-    pub texture: DynamicImage,
+  pub path: PathBuf,
+  pub texture: DynamicImage,
 }
-
-// fn dummy_texture() -> DynamicImage {
-//     DynamicImage::new_rgb8(0, 0)
-// }
 
 impl fmt::Debug for Texture {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -79,18 +73,11 @@ impl Coloration {
 }
 
 #[derive(Debug)]
-pub enum SurfaceType {
-  Diffuse,
-  Reflective { reflectivity: f32 },
-  Refractive { transparency: f32, index: f32 }
-}
-
-#[derive(Debug)]
-#[repr(C)]
-pub struct Material {
-  pub albedo: f32,
-  pub color: Coloration,
-  pub surface: SurfaceType
+pub enum Material {
+  Diffuse { albedo: f32, color: Coloration },
+  Reflective,
+  Refractive { index: f32 },
+  Emissive { emission: Color, intensity: f32 }
 }
 
 pub struct Plane {
@@ -157,12 +144,7 @@ pub struct Scene {
   pub width: u32,
   pub height: u32,
   pub fov: f64,
-  pub background: Color,
   pub entities: Vec<Element>,
-  pub lights: Vec<Light>,
-
-  pub shadow_bias: f64,
-  pub max_recursion_depth: u32,
 }
 
 impl Scene {
