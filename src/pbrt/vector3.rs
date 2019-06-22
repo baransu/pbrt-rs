@@ -20,27 +20,51 @@ impl Vector3 {
   }
 
   pub fn down() -> Vector3 {
-    Vector3 { x: 0.0, y: -1.0, z: 0.0 }
+    Vector3 {
+      x: 0.0,
+      y: -1.0,
+      z: 0.0,
+    }
   }
 
   pub fn up() -> Vector3 {
-    Vector3 { x: 0.0, y: 1.0, z: 0.0 }
+    Vector3 {
+      x: 0.0,
+      y: 1.0,
+      z: 0.0,
+    }
   }
 
   pub fn right() -> Vector3 {
-    Vector3 { x: 1.0, y: 0.0, z: 0.0 }
+    Vector3 {
+      x: 1.0,
+      y: 0.0,
+      z: 0.0,
+    }
   }
 
   pub fn left() -> Vector3 {
-    Vector3 { x: -1.0, y: 0.0, z: 0.0 }
+    Vector3 {
+      x: -1.0,
+      y: 0.0,
+      z: 0.0,
+    }
   }
 
   pub fn forward() -> Vector3 {
-    Vector3 { x: 0.0, y: 0.0, z: 1.0 }
+    Vector3 {
+      x: 0.0,
+      y: 0.0,
+      z: 1.0,
+    }
   }
 
   pub fn backward() -> Vector3 {
-    Vector3 { x: 0.0, y: 0.0, z: -1.0 }
+    Vector3 {
+      x: 0.0,
+      y: 0.0,
+      z: -1.0,
+    }
   }
 
   pub fn from_one(v: f64) -> Vector3 {
@@ -48,7 +72,7 @@ impl Vector3 {
   }
 
   pub fn norm(&self) -> f64 {
-    (self.x * self.x + self.y * self.y + self.z * self.z)
+    self.x * self.x + self.y * self.y + self.z * self.z
   }
 
   pub fn length(&self) -> f64 {

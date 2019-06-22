@@ -1,5 +1,5 @@
-use std::ops::{Mul, Add};
-use image::{Rgba, Pixel};
+use image::{Pixel, Rgba};
+use std::ops::{Add, Mul};
 
 const GAMMA: f32 = 2.2;
 
@@ -21,11 +21,18 @@ pub struct Color {
 
 impl Color {
   pub fn black() -> Color {
-    Color { r: 0.0, g: 0.0, b: 0.0 }
+    Color {
+      r: 0.0,
+      g: 0.0,
+      b: 0.0,
+    }
   }
-  
   pub fn white() -> Color {
-    Color { r: 1.0, g: 1.0, b: 1.0 }
+    Color {
+      r: 1.0,
+      g: 1.0,
+      b: 1.0,
+    }
   }
 
   pub fn clamp(&self) -> Color {
@@ -86,7 +93,7 @@ impl Mul<Color> for f32 {
   }
 }
 
-impl Add for  Color{
+impl Add for Color {
   type Output = Color;
 
   fn add(self, other: Color) -> Color {
