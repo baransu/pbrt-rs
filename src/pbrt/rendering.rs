@@ -1,5 +1,5 @@
 use pbrt::point::Point;
-use pbrt::scene::{Plane, Scene, Sphere, TextureCoords};
+use pbrt::scene::{Plane, Polygon, Scene, Sphere, TextureCoords};
 use pbrt::vector3::Vector3;
 
 #[derive(Debug, Clone, Copy)]
@@ -156,6 +156,92 @@ impl Intersectable for Plane {
     TextureCoords {
       x: hit_vec.dot(&x_axis) as f32,
       y: hit_vec.dot(&y_axis) as f32,
+    }
+  }
+}
+
+const EPSILON: f64 = 0.00001;
+
+impl Intersectable for Polygon {
+  fn intersect(&self, ray: &Ray) -> Option<f64> {
+    // Step 1: Find P (intersection between triangle plane and ray)
+
+    let n = self.normal;
+
+    let n_dot_r = n.dot(&ray.direction);
+    if (n_dot_r).abs() < EPSILON {
+      // The ray is parallel to the triangle. No intersection.
+      return None;
+    }
+
+    // Compute -D
+    let neg_d = n.dot(&self.vertices[0]);
+
+    // Compute T
+    let origin = Vector3::from_point(&ray.origin);
+    let t = (neg_d - origin.dot(&n)) / n_dot_r;
+    if t < 0.0 {
+      // Triangle is behind the origin of the ray. No intersection.
+      return None;
+    }
+
+    // Calculate P
+    let p = ray.origin + (ray.direction * (t));
+
+    // Step 2: is P in the triangle?
+
+    // Is P left of the first edge?
+    let edge = self.vertices[1] - self.vertices[0];
+    let vp = Vector3::from_point(&(p - self.vertices[0]));
+    let c = edge.cross(&vp);
+    if n.dot(&c) < 0.0 {
+      return None;
+    } // P is right of the edge. No intersection.
+
+    // Repeat for edges 2 and 3
+
+    let edge = self.vertices[2] - (self.vertices[1]);
+    let vp = Vector3::from_point(&(p - (self.vertices[1])));
+    let c = edge.cross(&vp);
+    if n.dot(&c) < 0.0 {
+      return None;
+    }
+
+    let edge = self.vertices[0] - (self.vertices[2]);
+    let vp = Vector3::from_point(&(p - (self.vertices[2])));
+    let c = edge.cross(&vp);
+    if n.dot(&c) < 0.0 {
+      return None;
+    }
+
+    // Finally, we've confirmed an intersection.
+    Some(t)
+  }
+
+  fn surface_normal(&self, _: &Point) -> Vector3 {
+    self.normal
+  }
+
+  fn texture_coords(&self, _: &Point) -> TextureCoords {
+    // let mut x_axis = self.normal.cross(&Vector3 {
+    //   x: 0.0,
+    //   y: 0.0,
+    //   z: 1.0,
+    // });
+    // if x_axis.length() == 0.0 {
+    //   x_axis = self.normal.cross(&Vector3 {
+    //     x: 0.0,
+    //     y: 1.0,
+    //     z: 0.0,
+    //   });
+    // }
+    // let y_axis = self.normal.cross(&x_axis);
+
+    // let hit_vec = *hit_point - self.origin;
+
+    TextureCoords {
+      x: 0.0 as f32,
+      y: 0.0 as f32,
     }
   }
 }

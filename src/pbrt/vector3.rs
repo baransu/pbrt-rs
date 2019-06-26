@@ -1,5 +1,6 @@
 extern crate serde;
 
+use pbrt::point::Point;
 use std::ops::{Add, Mul, Neg, Sub};
 
 #[derive(Copy, Clone, Debug)]
@@ -16,6 +17,14 @@ impl Vector3 {
       x: 0.0,
       y: 0.0,
       z: 0.0,
+    }
+  }
+
+  pub fn from_point(point: &Point) -> Vector3 {
+    Vector3 {
+      x: point.x,
+      y: point.y,
+      z: point.z
     }
   }
 

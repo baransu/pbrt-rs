@@ -1,39 +1,114 @@
 extern crate image;
+extern crate obj;
 extern crate rand;
 extern crate rayon;
 extern crate serde;
 
 use image::ImageBuffer;
+use obj::Obj;
 use pbrt::color::Color;
+use pbrt::matrix4::Matrix4x4;
 use pbrt::point::Point;
 use pbrt::rendering::{Intersectable, Ray};
-use pbrt::scene::{Coloration, Element, Material, Plane, Scene, Sphere, Texture};
+use pbrt::scene::{Coloration, Element, Material, Plane, Polygon, Scene, Sphere, Texture};
 use pbrt::vector3::Vector3;
 use rand::Rng;
 use rayon::prelude::*;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::time::Instant;
 
 mod pbrt;
 
 const FLOATING_POINT_BACKOFF: f64 = 0.01;
-const RAY_COUNT: u32 = 128;
+const RAY_COUNT: u32 = 16;
 const BOUNCE_CAP: u32 = 8;
 // RAY_COUNT + BOUNCE_CAP
 const ROUND_COUNT: u32 = 128;
 const NUM_RAYS: usize = 16;
 
-fn main() {
-  let green_mat = Material::Diffuse {
-    albedo: 0.18,
-    color: Coloration::Color(Color {
-      r: 0.4,
-      g: 1.0,
-      b: 0.4,
-    }),
+fn convert_objects_to_polygons(
+  obj: &Obj<obj::SimplePolygon>,
+  object_to_world: Matrix4x4,
+) -> Vec<Element> {
+  let mut polygons = vec![];
+
+  let make_vector = |floats: &[f32; 3]| {
+    let v = Vector3 {
+      x: floats[0] as f64,
+      y: floats[1] as f64,
+      z: floats[2] as f64,
+    };
+
+    let t = object_to_world.clone() * v;
+    t
   };
 
+  let make_polygon = |index1, index2, index3| {
+    let obj::IndexTuple(index1, _, _) = index1;
+    let obj::IndexTuple(index2, _, _) = index2;
+    let obj::IndexTuple(index3, _, _) = index3;
+
+    let vertex1 = make_vector(&obj.position[index1]);
+    let vertex2 = make_vector(&obj.position[index2]);
+    let vertex3 = make_vector(&obj.position[index3]);
+
+    let a = vertex2 - vertex1;
+    let b = vertex3 - vertex1;
+
+    let normal = a.cross(&b).normalize();
+
+    Element::Polygon(Polygon {
+      vertices: [vertex1, vertex2, vertex3],
+      normal,
+      material: Material::Diffuse {
+        albedo: 0.18,
+        color: Coloration::Color(Color {
+          r: 0.4,
+          g: 1.0,
+          b: 0.4,
+        }),
+      },
+    })
+  };
+
+  for object in &obj.objects {
+    for group in &object.groups {
+      for poly in &group.polys {
+        let index1 = poly[0];
+        for others in poly[1..].windows(2) {
+          let polygon = make_polygon(index1, others[0], others[1]);
+          polygons.push(polygon);
+        }
+      }
+    }
+  }
+
+  return polygons;
+}
+
+fn main() {
+  let load_start = Instant::now();
+
+  let mesh_path = Path::new("teapot.obj");
+  let mesh: Obj<obj::SimplePolygon> = Obj::load(mesh_path).expect("Failed to load mesh");
+
+  let object_to_world_matrix = Matrix4x4::translate(0.0, -3.0 - -1.575, -5.0)
+    * Matrix4x4::scale_linear(1.0)
+    * Matrix4x4::translate(1.0, -1.575, 0.0);
+
+  let teapot_1_polygons = convert_objects_to_polygons(&mesh, object_to_world_matrix);
+
+  // let green_mat = Material::Diffuse {
+  //   albedo: 0.18,
+  //   color: Coloration::Color(Color {
+  //     r: 0.4,
+  //     g: 1.0,
+  //     b: 0.4,
+  //   }),
+  // };
+
   let red_mat = Material::Emissive {
-    intensity: 250.0,
+    intensity: 200.0,
     emission: Color {
       r: 1.0,
       g: 0.0,
@@ -45,109 +120,125 @@ fn main() {
 
   let blue_mat = Material::Reflective;
 
+  let entities = vec![
+    // floor
+    Element::Plane(Plane {
+      origin: Point::new(0.0, -3.0, -5.0),
+      normal: Vector3::down(),
+      material: Material::Diffuse {
+        albedo: 0.18,
+        color: Coloration::Texture(
+          Texture::load_texture(PathBuf::from("./checkerboard.png")).unwrap(),
+        ),
+      },
+    }),
+    // ceiling
+    Element::Plane(Plane {
+      origin: Point::new(0.0, 5.0, 5.0),
+      normal: Vector3::up(),
+      material: Material::Emissive {
+        intensity: 200.0,
+        emission: Color {
+          r: 1.0,
+          g: 1.0,
+          b: 1.0,
+        },
+      },
+      // material: Material::Diffuse {
+      //   albedo: 0.18,
+      //   color: Coloration::Color(Color {
+      //     r: 1.0,
+      //     g: 1.0,
+      //     b: 1.0,
+      //   }),
+      // },
+    }),
+    // right wall
+    Element::Plane(Plane {
+      origin: Point::new(5.0, 0.0, 5.0),
+      normal: Vector3::right(),
+      material: Material::Diffuse {
+        albedo: 0.18,
+        color: Coloration::Color(Color {
+          r: 1.0,
+          g: 1.0,
+          b: 1.0,
+        }),
+      },
+    }),
+    // left wall
+    Element::Plane(Plane {
+      origin: Point::new(-5.0, 0.0, 5.0),
+      normal: Vector3::left(),
+      material: Material::Diffuse {
+        albedo: 0.18,
+        color: Coloration::Color(Color {
+          r: 1.0,
+          g: 1.0,
+          b: 1.0,
+        }),
+      },
+    }),
+    // back wall
+    Element::Plane(Plane {
+      origin: Point::new(0.0, 0.0, -10.0),
+      normal: Vector3::backward(),
+      material: Material::Diffuse {
+        albedo: 0.18,
+        color: Coloration::Color(Color {
+          r: 1.0,
+          g: 1.0,
+          b: 1.0,
+        }),
+      },
+    }),
+    // front wall
+    Element::Plane(Plane {
+      origin: Point::new(0.0, 0.0, 10.0),
+      normal: Vector3::forward(),
+      material: Material::Diffuse {
+        albedo: 0.18,
+        color: Coloration::Color(Color {
+          r: 1.0,
+          g: 1.0,
+          b: 1.0,
+        }),
+      },
+    }),
+    // Element::Sphere(Sphere {
+    //   center: Point::new(0.0, 0.0, -5.0),
+    //   radius: 1.0,
+    //   material: green_mat,
+    // }),
+    Element::Sphere(Sphere {
+      center: Point::new(-3.0, 1.0, -6.0),
+      radius: 2.0,
+      material: transparent_mat,
+    }),
+    Element::Sphere(Sphere {
+      center: Point::new(-2.0, -2.0, -6.0),
+      radius: 1.0,
+      material: red_mat,
+    }),
+    Element::Sphere(Sphere {
+      center: Point::new(3.0, 0.0, -10.0),
+      radius: 2.0,
+      material: blue_mat,
+    }),
+  ];
+
   let scene = Scene {
-    width: 2048,
-    height: 2048,
+    width: 1280,
+    height: 720,
     fov: 90.0,
-    entities: vec![
-      // floor
-      Element::Plane(Plane {
-        origin: Point::new(0.0, -3.0, -5.0),
-        normal: Vector3::down(),
-        material: Material::Diffuse {
-          albedo: 0.18,
-          color: Coloration::Texture(
-            Texture::load_texture(PathBuf::from("./checkerboard.png")).unwrap(),
-          ),
-        },
-      }),
-      // ceiling
-      Element::Plane(Plane {
-        origin: Point::new(0.0, 5.0, 5.0),
-        normal: Vector3::up(),
-        material: Material::Emissive {
-          intensity: 200.0,
-          emission: Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-          },
-        },
-      }),
-      // right wall
-      Element::Plane(Plane {
-        origin: Point::new(5.0, 0.0, 5.0),
-        normal: Vector3::right(),
-        material: Material::Diffuse {
-          albedo: 0.18,
-          color: Coloration::Color(Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-          }),
-        },
-      }),
-      // left wall
-      Element::Plane(Plane {
-        origin: Point::new(-5.0, 0.0, 5.0),
-        normal: Vector3::left(),
-        material: Material::Diffuse {
-          albedo: 0.18,
-          color: Coloration::Color(Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-          }),
-        },
-      }),
-      // back wall
-      Element::Plane(Plane {
-        origin: Point::new(0.0, 0.0, -10.0),
-        normal: Vector3::backward(),
-        material: Material::Diffuse {
-          albedo: 0.18,
-          color: Coloration::Color(Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-          }),
-        },
-      }),
-      // front wall
-      Element::Plane(Plane {
-        origin: Point::new(0.0, 0.0, 10.0),
-        normal: Vector3::forward(),
-        material: Material::Diffuse {
-          albedo: 0.18,
-          color: Coloration::Color(Color {
-            r: 1.0,
-            g: 1.0,
-            b: 1.0,
-          }),
-        },
-      }),
-      Element::Sphere(Sphere {
-        center: Point::new(0.0, 0.0, -5.0),
-        radius: 1.0,
-        material: green_mat,
-      }),
-      Element::Sphere(Sphere {
-        center: Point::new(-3.0, 1.0, -6.0),
-        radius: 2.0,
-        material: transparent_mat,
-      }),
-      Element::Sphere(Sphere {
-        center: Point::new(-2.0, -2.0, -6.0),
-        radius: 1.0,
-        material: red_mat,
-      }),
-      Element::Sphere(Sphere {
-        center: Point::new(3.0, 0.0, -10.0),
-        radius: 2.0,
-        material: blue_mat,
-      }),
-    ],
+    entities: entities
+      .into_iter()
+      .chain(teapot_1_polygons.into_iter())
+      .collect(),
   };
+
+  let load_time = load_start.elapsed();
+  println!("Load time: {:?}", load_time);
 
   render(&scene).save("test.png").unwrap();
 }
@@ -332,11 +423,11 @@ fn render_pixel(scene: &Scene, x: &u32, y: &u32) -> Vec<u8> {
 fn render(scene: &Scene) -> ImageBuffer<image::Rgba<u8>, Vec<u8>> {
   let height = scene.height as usize;
   let width = scene.width as usize;
-  let mut buffer = vec![vec![(0, 0); height]; width];
+  let mut buffer = vec![vec![(0, 0); width]; height];
 
-  for x in 0..scene.width {
-    for y in 0..scene.height {
-      buffer[y as usize][x as usize] = (x, y);
+  for x in 0..width {
+    for y in 0..height {
+      buffer[y][x] = (x as u32, y as u32);
     }
   }
 

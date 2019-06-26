@@ -74,6 +74,13 @@ pub enum Material {
   Emissive { emission: Color, intensity: f32 },
 }
 
+
+pub struct Polygon {
+  pub vertices: [Vector3; 3],
+  pub normal: Vector3,
+  pub material: Material,
+}
+
 pub struct Plane {
   pub origin: Point,
   pub normal: Vector3,
@@ -83,6 +90,7 @@ pub struct Plane {
 pub enum Element {
   Sphere(Sphere),
   Plane(Plane),
+  Polygon(Polygon),
 }
 
 impl Element {
@@ -90,6 +98,7 @@ impl Element {
     match *self {
       Element::Sphere(ref s) => &s.material,
       Element::Plane(ref p) => &p.material,
+      Element::Polygon(ref p) => &p.material,
     }
   }
 }
@@ -99,6 +108,7 @@ impl Intersectable for Element {
     match *self {
       Element::Sphere(ref s) => s.intersect(&ray),
       Element::Plane(ref p) => p.intersect(&ray),
+      Element::Polygon(ref p) => p.intersect(&ray),
     }
   }
 
@@ -106,6 +116,7 @@ impl Intersectable for Element {
     match *self {
       Element::Sphere(ref s) => s.surface_normal(&hit_point),
       Element::Plane(ref p) => p.surface_normal(&hit_point),
+      Element::Polygon(ref p) => p.surface_normal(&hit_point),
     }
   }
 
@@ -113,6 +124,7 @@ impl Intersectable for Element {
     match *self {
       Element::Sphere(ref s) => s.texture_coords(&hit_point),
       Element::Plane(ref p) => p.texture_coords(&hit_point),
+      Element::Polygon(ref p) => p.texture_coords(&hit_point),
     }
   }
 }
