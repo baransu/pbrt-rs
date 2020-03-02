@@ -22,6 +22,5 @@ Based on:
 
 - global illumination / ambient light
 - better code structure
-- obj models support
 - depth of field
-- improved parallelization (not per pixel but per tile, will minimize load balancing overhead)
+- improved parallelization (not per pixel but per tile (Bound2), will minimize load balancing overhead)

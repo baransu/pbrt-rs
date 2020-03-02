@@ -151,11 +151,13 @@ impl Index<usize> for Matrix4x4 {
         &self.elements[idx]
     }
 }
+
 impl IndexMut<usize> for Matrix4x4 {
     fn index_mut(&mut self, idx: usize) -> &mut [f64; 4] {
         &mut self.elements[idx]
     }
 }
+
 impl Mul for Matrix4x4 {
     type Output = Matrix4x4;
 
@@ -173,6 +175,7 @@ impl Mul for Matrix4x4 {
         result
     }
 }
+
 impl Mul<Vector3> for Matrix4x4 {
     type Output = Vector3;
 

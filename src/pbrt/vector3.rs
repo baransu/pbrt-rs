@@ -24,7 +24,7 @@ impl Vector3 {
     Vector3 {
       x: point.x,
       y: point.y,
-      z: point.z
+      z: point.z,
     }
   }
 
@@ -89,11 +89,11 @@ impl Vector3 {
   }
 
   pub fn normalize(&self) -> Vector3 {
-    let len = self.length();
+    let divider = 1.0 / self.length();
     Vector3 {
-      x: self.x / len,
-      y: self.y / len,
-      z: self.z / len,
+      x: self.x * divider,
+      y: self.y * divider,
+      z: self.z * divider,
     }
   }
 

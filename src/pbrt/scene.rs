@@ -74,7 +74,6 @@ pub enum Material {
   Emissive { emission: Color, intensity: f32 },
 }
 
-
 pub struct Polygon {
   pub vertices: [Vector3; 3],
   pub normal: Vector3,
