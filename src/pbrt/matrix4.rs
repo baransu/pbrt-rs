@@ -1,5 +1,6 @@
-use pbrt::vector3::Vector3;
 use std::ops::{Index, IndexMut, Mul};
+
+use super::vector3::Vector3;
 
 #[derive(Clone, Debug)]
 pub struct Matrix4x4 {
@@ -31,41 +32,41 @@ impl Matrix4x4 {
         }
     }
 
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-    pub fn rotate_x(t: f64) -> Matrix4x4 {
-        let sin = t.sin();
-        let cos = t.cos();
-        Matrix4x4 {
-            elements: [[1.0, 0.0, 0.0, 0.0],
-                       [0.0, cos, sin, 0.0],
-                       [0.0,-sin, cos, 0.0],
-                       [0.0, 0.0, 0.0, 1.0]],
-        }
-    }
+    // #[cfg_attr(rustfmt, rustfmt_skip)]
+    // pub fn rotate_x(t: f64) -> Matrix4x4 {
+    //     let sin = t.sin();
+    //     let cos = t.cos();
+    //     Matrix4x4 {
+    //         elements: [[1.0, 0.0, 0.0, 0.0],
+    //                    [0.0, cos, sin, 0.0],
+    //                    [0.0,-sin, cos, 0.0],
+    //                    [0.0, 0.0, 0.0, 1.0]],
+    //     }
+    // }
 
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-    pub fn rotate_y(t: f64) -> Matrix4x4 {
-        let sin = t.sin();
-        let cos = t.cos();
-        Matrix4x4 {
-            elements: [[cos, 0.0, -sin, 0.0],
-                       [0.0, 1.0, 0.0, 0.0],
-                       [sin, 0.0, cos, 0.0],
-                       [0.0, 0.0, 0.0, 1.0]],
-        }
-    }
+    // #[cfg_attr(rustfmt, rustfmt_skip)]
+    // pub fn rotate_y(t: f64) -> Matrix4x4 {
+    //     let sin = t.sin();
+    //     let cos = t.cos();
+    //     Matrix4x4 {
+    //         elements: [[cos, 0.0, -sin, 0.0],
+    //                    [0.0, 1.0, 0.0, 0.0],
+    //                    [sin, 0.0, cos, 0.0],
+    //                    [0.0, 0.0, 0.0, 1.0]],
+    //     }
+    // }
 
-    #[cfg_attr(rustfmt, rustfmt_skip)]
-    pub fn rotate_z(t: f64) -> Matrix4x4 {
-        let sin = t.sin();
-        let cos = t.cos();
-        Matrix4x4 {
-            elements: [[cos, sin, 0.0, 0.0],
-                       [-sin, cos, 0.0, 0.0],
-                       [0.0, 0.0, 1.0, 0.0],
-                       [0.0, 0.0, 0.0, 1.0]],
-        }
-    }
+    // #[cfg_attr(rustfmt, rustfmt_skip)]
+    // pub fn rotate_z(t: f64) -> Matrix4x4 {
+    //     let sin = t.sin();
+    //     let cos = t.cos();
+    //     Matrix4x4 {
+    //         elements: [[cos, sin, 0.0, 0.0],
+    //                    [-sin, cos, 0.0, 0.0],
+    //                    [0.0, 0.0, 1.0, 0.0],
+    //                    [0.0, 0.0, 0.0, 1.0]],
+    //     }
+    // }
 
     #[cfg_attr(rustfmt, rustfmt_skip)]
     pub fn translate(tx: f64, ty:f64, tz: f64) -> Matrix4x4 {
@@ -77,72 +78,72 @@ impl Matrix4x4 {
         }
     }
 
-    pub fn inverse(&self) -> Matrix4x4 {
-        let mut s = Matrix4x4::identity();
-        let mut t = self.clone();
-        // Forward elimination
-        for i in 0..3 {
-            let mut pivot = i;
-            let mut pivotsize = t[i][i].abs();
-            for j in (i + 1)..4 {
-                let tmp = t[j][i].abs();
-                if tmp > pivotsize {
-                    pivot = j;
-                    pivotsize = tmp;
-                }
-            }
+    // pub fn inverse(&self) -> Matrix4x4 {
+    //     let mut s = Matrix4x4::identity();
+    //     let mut t = self.clone();
+    //     // Forward elimination
+    //     for i in 0..3 {
+    //         let mut pivot = i;
+    //         let mut pivotsize = t[i][i].abs();
+    //         for j in (i + 1)..4 {
+    //             let tmp = t[j][i].abs();
+    //             if tmp > pivotsize {
+    //                 pivot = j;
+    //                 pivotsize = tmp;
+    //             }
+    //         }
 
-            if pivotsize == 0.0 {
-                return Matrix4x4::identity();
-            }
-            if pivot != i {
-                for j in 0..4 {
-                    let mut tmp: f64;
+    //         if pivotsize == 0.0 {
+    //             return Matrix4x4::identity();
+    //         }
+    //         if pivot != i {
+    //             for j in 0..4 {
+    //                 let mut tmp: f64;
 
-                    tmp = t[i][j];
-                    t[i][j] = t[pivot][j];
-                    t[pivot][j] = tmp;
+    //                 tmp = t[i][j];
+    //                 t[i][j] = t[pivot][j];
+    //                 t[pivot][j] = tmp;
 
-                    tmp = s[i][j];
-                    s[i][j] = s[pivot][j];
-                    s[pivot][j] = tmp;
-                }
-            }
-            for j in (i + 1)..4 {
-                let f = t[j][i] / t[i][i];
+    //                 tmp = s[i][j];
+    //                 s[i][j] = s[pivot][j];
+    //                 s[pivot][j] = tmp;
+    //             }
+    //         }
+    //         for j in (i + 1)..4 {
+    //             let f = t[j][i] / t[i][i];
 
-                for k in 0..4 {
-                    t[j][k] -= f * t[i][k];
-                    s[j][k] -= f * s[i][k];
-                }
-            }
-        }
-        // Backward substitution
-        for i in (0..4).rev() {
-            let mut f: f64 = t[i][i];
+    //             for k in 0..4 {
+    //                 t[j][k] -= f * t[i][k];
+    //                 s[j][k] -= f * s[i][k];
+    //             }
+    //         }
+    //     }
+    //     // Backward substitution
+    //     for i in (0..4).rev() {
+    //         let mut f: f64 = t[i][i];
 
-            if f == 0.0 {
-                // Cannot invert singular matrix
-                return Matrix4x4::identity();
-            }
+    //         if f == 0.0 {
+    //             // Cannot invert singular matrix
+    //             return Matrix4x4::identity();
+    //         }
 
-            for j in 0..4 {
-                t[i][j] /= f;
-                s[i][j] /= f;
-            }
+    //         for j in 0..4 {
+    //             t[i][j] /= f;
+    //             s[i][j] /= f;
+    //         }
 
-            for j in 0..i {
-                f = t[j][i];
+    //         for j in 0..i {
+    //             f = t[j][i];
 
-                for k in 0..4 {
-                    t[j][k] -= f * t[i][k];
-                    s[j][k] -= f * s[i][k];
-                }
-            }
-        }
+    //             for k in 0..4 {
+    //                 t[j][k] -= f * t[i][k];
+    //                 s[j][k] -= f * s[i][k];
+    //             }
+    //         }
+    //     }
 
-        return s;
-    }
+    //     return s;
+    // }
 }
 impl Index<usize> for Matrix4x4 {
     type Output = [f64; 4];
